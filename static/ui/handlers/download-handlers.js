@@ -1,5 +1,7 @@
 import { log, showLoading, showStatus } from '../utils/dom-utils.js';
-import api from '../../api/index.js';
+
+// Biến toàn cục để theo dõi tiến trình
+const downloadProgress = new Map();
 
 export function setupDownloadHandlers() {
     const urlInput = document.getElementById('videoUrl');
@@ -19,7 +21,10 @@ export function setupDownloadHandlers() {
             }, 100);
         });
         urlInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); downloadVideo(); }
+            if (e.key === 'Enter') { 
+                e.preventDefault(); 
+                downloadSingleVideo(); 
+            }
         });
     }
 
@@ -31,9 +36,6 @@ export function setupDownloadHandlers() {
         });
     }
 
-    // Set default download mode
-    switchDownloadMode('single');
-
     log('📥 Download handlers initialized', 'success');
 }
 
@@ -41,26 +43,6 @@ function extractYouTubeId(url) {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[7].length === 11) ? match[7] : null;
-}
-
-// Download Mode Management
-export function switchDownloadMode(mode) {
-    window.currentDownloadMode = mode;
-
-    // Update mode buttons
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-mode') === mode) {
-            btn.classList.add('active');
-        }
-    });
-
-    // Show/hide sections
-    document.getElementById('singleDownloadSection').classList.toggle('active', mode === 'single');
-    document.getElementById('mergeDownloadSection').classList.toggle('active', mode === 'merge');
-
-    // Clear status
-    document.getElementById('downloadStatus').innerHTML = '';
 }
 
 function updateUrlPreview(urlsText) {
@@ -72,17 +54,19 @@ function updateUrlPreview(urlsText) {
     const previewList = document.getElementById('urlPreview');
 
     if (urls.length === 0) {
-        previewContainer.style.display = 'none';
+        if (previewContainer) previewContainer.style.display = 'none';
         return;
     }
 
-    previewContainer.style.display = 'block';
-    previewList.innerHTML = urls.map((url, index) => `
-        <div class="preview-item">
-            <span class="preview-index">${index + 1}</span>
-            <span class="preview-url">${getDomainFromUrl(url)}</span>
-        </div>
-    `).join('');
+    if (previewContainer && previewList) {
+        previewContainer.style.display = 'block';
+        previewList.innerHTML = urls.map((url, index) => `
+            <div class="preview-item">
+                <span class="preview-index">${index + 1}</span>
+                <span class="preview-url">${getDomainFromUrl(url)}</span>
+            </div>
+        `).join('');
+    }
 }
 
 function getDomainFromUrl(url) {
@@ -94,224 +78,6 @@ function getDomainFromUrl(url) {
     }
 }
 
-// Single Video Download
-window.downloadVideo = async function() {
-    const url = document.getElementById('videoUrl').value.trim();
-    const quality = document.getElementById('quality').value;
-    let filename = document.getElementById('filename').value.trim();
-
-    if (!url) {
-        showStatus('❌ Vui lòng nhập URL video', 'error', 'downloadStatus');
-        return;
-    }
-
-    if (!isValidUrl(url)) {
-        showStatus('❌ Vui lòng nhập URL hợp lệ', 'error', 'downloadStatus');
-        return;
-    }
-
-    if (filename) {
-        if (!filename.toLowerCase().endsWith('.mp4')) {
-            filename += '.mp4';
-        }
-
-        // Check if file already exists
-        try {
-            const files = await api.file.getFiles();
-            const existingFile = files.downloads.find(file => file.name === filename);
-            if (existingFile) {
-                if (!confirm(`File "${filename}" đã tồn tại. Bạn có muốn ghi đè?`)) {
-                    return;
-                }
-            }
-        } catch (error) {
-            console.warn('Could not check existing files:', error);
-        }
-    }
-
-    const button = document.querySelector('#singleDownloadSection .btn-primary');
-    showLoading(button, true, 'Đang tải...');
-
-    try {
-        showStatus('⏳ Đang tải video...', 'info', 'downloadStatus');
-
-        const result = await api.download.downloadVideo(url, filename || undefined, quality);
-
-        if (result.success) {
-            let message = `✅ Tải xuống hoàn tất: ${result.message || 'Thành công'}`;
-            if (result.downloaded_name) {
-                message += ` (${result.downloaded_name})`;
-            }
-            showStatus(message, 'success', 'downloadStatus');
-
-            // Clear form
-            document.getElementById('videoUrl').value = '';
-            document.getElementById('filename').value = '';
-
-            // Refresh files list
-            if (window.refreshFiles) {
-                setTimeout(window.refreshFiles, 1000);
-            }
-        } else {
-            let errorMsg = `❌ Tải xuống thất bại: ${result.error || 'Lỗi không xác định'}`;
-            if (result.errors && result.errors.length > 0) {
-                errorMsg += ` - ${result.errors.join(', ')}`;
-            }
-            showStatus(errorMsg, 'error', 'downloadStatus');
-        }
-    } catch (error) {
-        showStatus(`❌ Lỗi tải xuống: ${error.message}`, 'error', 'downloadStatus');
-    } finally {
-        showLoading(button, false);
-    }
-};
-
-// Download and Merge Videos
-window.downloadAndMergeVideos = async function() {
-    const urlsText = document.getElementById('videoUrls').value.trim();
-    const quality = document.getElementById('mergeQuality').value;
-    const format = document.getElementById('mergeFormat').value;
-    const filename = document.getElementById('mergeFilename').value.trim() || `merged_video_${Date.now()}.${format}`;
-    const transitionType = document.getElementById('transitionType').value;
-    const autoMerge = document.getElementById('autoMerge').checked;
-    const keepOriginals = document.getElementById('keepOriginals').checked;
-
-    if (!urlsText) {
-        showStatus('❌ Vui lòng nhập ít nhất một URL video', 'error', 'downloadStatus');
-        return;
-    }
-
-    // Parse URLs
-    const urls = urlsText.split('\n')
-        .map(url => url.trim())
-        .filter(url => url.length > 0 && isValidUrl(url));
-
-    if (urls.length === 0) {
-        showStatus('❌ Không có URL hợp lệ', 'error', 'downloadStatus');
-        return;
-    }
-
-    if (urls.length === 1) {
-        showStatus('⚠️ Chỉ có một URL. Sử dụng chế độ tải video đơn để hiệu quả hơn.', 'warning', 'downloadStatus');
-        return;
-    }
-
-    const button = document.querySelector('#mergeDownloadSection .btn-primary');
-    const progressContainer = document.getElementById('mergeProgress');
-    const progressFill = document.getElementById('mergeProgressFill');
-    const progressText = document.getElementById('mergeProgressText');
-    const progressStage = document.getElementById('mergeStage');
-    const progressPercent = document.getElementById('mergePercent');
-
-    showLoading(button, true, 'Đang xử lý...');
-    progressContainer.style.display = 'block';
-
-    try {
-        let downloadedVideos = [];
-        let successCount = 0;
-        let failCount = 0;
-
-        showStatus(`⏳ Bắt đầu tải ${urls.length} video...`, 'info', 'downloadStatus');
-        progressStage.textContent = 'Đang tải video...';
-
-        // Download phase
-        for (let i = 0; i < urls.length; i++) {
-            const url = urls[i];
-
-            // Update progress
-            const downloadProgress = ((i + 1) / urls.length) * 100;
-            progressFill.style.width = downloadProgress + '%';
-            progressPercent.textContent = Math.round(downloadProgress) + '%';
-            progressText.textContent = `Đang tải video ${i + 1}/${urls.length}: ${getDomainFromUrl(url)}`;
-
-            try {
-                showStatus(`⏳ Đang tải video ${i + 1}/${urls.length}...`, 'info', 'downloadStatus');
-
-                // Download individual video
-                const tempFilename = `temp_video_${i + 1}_${Date.now()}.${format}`;
-                const result = await api.download.downloadVideo(url, tempFilename, quality);
-
-                if (result.success) {
-                    downloadedVideos.push({
-                        name: result.downloaded_name || tempFilename,
-                        url: url,
-                        duration: result.duration || 0,
-                        quality: quality
-                    });
-                    successCount++;
-                    log(`✅ Đã tải: ${url}`, 'success');
-                } else {
-                    failCount++;
-                    log(`❌ Lỗi tải: ${url} - ${result.error}`, 'error');
-                }
-            } catch (error) {
-                failCount++;
-                log(`❌ Lỗi tải ${url}: ${error.message}`, 'error');
-            }
-        }
-
-        // Merge phase if auto-merge is enabled and we have videos
-        if (autoMerge && downloadedVideos.length > 0) {
-            showStatus(`⏳ Đang ghép ${downloadedVideos.length} video...`, 'info', 'downloadStatus');
-            progressStage.textContent = 'Đang ghép video...';
-            progressText.textContent = `Đang ghép ${downloadedVideos.length} video...`;
-
-            try {
-                // Call merge API
-                const videoPaths = downloadedVideos.map(video => video.name);
-                const mergeResult = await api.process.mergeVideos(videoPaths, filename, {
-                    transition: transitionType,
-                    keepOriginals: keepOriginals
-                });
-
-                if (mergeResult.success) {
-                    const totalDuration = downloadedVideos.reduce((sum, video) => sum + (video.duration || 0), 0);
-
-                    showStatus(`✅ Đã ghép thành công ${downloadedVideos.length} video thành: ${filename}`, 'success', 'downloadStatus');
-
-                    // Clean up temporary files if not keeping originals
-                    if (!keepOriginals) {
-                        for (const video of downloadedVideos) {
-                            try {
-                                await api.file.deleteFile(video.name);
-                            } catch (error) {
-                                console.warn(`Could not delete temporary file: ${video.name}`, error);
-                            }
-                        }
-                        setTimeout(() => {
-                            showStatus('🗑️ Đã dọn dẹp file tạm', 'info', 'downloadStatus');
-                        }, 1000);
-                    }
-                } else {
-                    showStatus(`❌ Lỗi ghép video: ${mergeResult.error}`, 'error', 'downloadStatus');
-                }
-            } catch (error) {
-                showStatus(`❌ Lỗi ghép video: ${error.message}`, 'error', 'downloadStatus');
-            }
-        } else if (downloadedVideos.length > 0) {
-            showStatus(`✅ Đã tải ${successCount} video thành công (${failCount} lỗi)`, 'success', 'downloadStatus');
-        } else {
-            showStatus('❌ Không có video nào được tải thành công', 'error', 'downloadStatus');
-        }
-
-        // Refresh files list
-        if (window.refreshFiles) {
-            setTimeout(window.refreshFiles, 1000);
-        }
-
-    } catch (error) {
-        showStatus(`❌ Lỗi quá trình tải và ghép: ${error.message}`, 'error', 'downloadStatus');
-    } finally {
-        showLoading(button, false);
-        setTimeout(() => {
-            progressContainer.style.display = 'none';
-            progressFill.style.width = '0%';
-            progressPercent.textContent = '0%';
-        }, 5000);
-    }
-};
-
-// Helper function to validate URL
 function isValidUrl(string) {
     try {
         new URL(string);
@@ -320,3 +86,333 @@ function isValidUrl(string) {
         return false;
     }
 }
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatTime(seconds) {
+    if (!seconds || seconds < 0) return '--:--';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Function to trigger browser download
+function triggerBrowserDownload(blob, filename) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// Update progress display với dữ liệu thực từ server
+function updateProgress(progressData, elementPrefix = 'download') {
+    const progressContainer = document.getElementById(`${elementPrefix}Progress`);
+    const progressFill = document.getElementById(`${elementPrefix}ProgressFill`);
+    const progressText = document.getElementById(`${elementPrefix}ProgressText`);
+    const progressStage = document.getElementById(`${elementPrefix}Stage`);
+    const progressPercent = document.getElementById(`${elementPrefix}Percent`);
+    const progressSize = document.getElementById(`${elementPrefix}Size`);
+    const progressSpeed = document.getElementById(`${elementPrefix}Speed`);
+    const progressETA = document.getElementById(`${elementPrefix}ETA`);
+    const progressTime = document.getElementById(`${elementPrefix}Time`);
+
+    if (progressContainer) progressContainer.style.display = 'block';
+    
+    const percent = progressData.percent || 0;
+    if (progressFill) progressFill.style.width = percent + '%';
+    if (progressPercent) progressPercent.textContent = Math.round(percent) + '%';
+    
+    if (progressText) progressText.textContent = progressData.text || progressData.stage || '';
+    if (progressStage) progressStage.textContent = progressData.stage || '';
+    
+    if (progressSize && progressData.downloaded_bytes !== undefined && progressData.total_bytes) {
+        progressSize.textContent = `${formatFileSize(progressData.downloaded_bytes)} / ${formatFileSize(progressData.total_bytes)}`;
+    } else if (progressSize && progressData.size) {
+        progressSize.textContent = formatFileSize(progressData.size);
+    }
+    
+    if (progressSpeed && progressData.speed) {
+        progressSpeed.textContent = `${formatFileSize(progressData.speed)}/s`;
+    }
+    
+    if (progressETA && progressData.eta) {
+        progressETA.textContent = formatTime(progressData.eta);
+    }
+
+    // Hiển thị thời gian đã trôi qua
+    if (progressTime && progressData.start_time) {
+        const elapsed = Math.floor((Date.now() / 1000) - progressData.start_time);
+        progressTime.textContent = formatTime(elapsed);
+    }
+}
+
+// Hàm polling để kiểm tra tiến trình từ server
+async function pollDownloadProgress(downloadId, elementPrefix, onComplete, onError) {
+    const pollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/progress/${downloadId}`);
+            const result = await response.json();
+            
+            if (result.success && result.progress) {
+                const progress = result.progress;
+                updateProgress(progress, elementPrefix);
+                
+                if (progress.status === 'completed') {
+                    clearInterval(pollInterval);
+                    onComplete(progress);
+                } else if (progress.status === 'error') {
+                    clearInterval(pollInterval);
+                    onError(progress.error || 'Lỗi không xác định từ server');
+                }
+            }
+        } catch (error) {
+            log(`❌ Error polling progress: ${error.message}`, 'error');
+            // Tiếp tục poll trừ khi lỗi quá nặng
+        }
+    }, 1500);
+    
+    return pollInterval;
+}
+
+// Single Video Download với Progress Tracking thực tế
+export async function downloadSingleVideo() {
+    const url = document.getElementById('videoUrl')?.value.trim();
+    const quality = document.getElementById('quality')?.value || 'best';
+    const format = document.getElementById('format')?.value || 'mp4';
+    let filename = document.getElementById('filename')?.value.trim();
+
+    if (!url) {
+        showStatus('❌ Vui lòng nhập URL video', 'error', 'downloadStatus');
+        return;
+    }
+
+    if (!isValidUrl(url)) {
+        showStatus('❌ URL không hợp lệ', 'error', 'downloadStatus');
+        return;
+    }
+
+    // Auto add extension if needed
+    if (filename && !filename.toLowerCase().endsWith(`.${format}`)) {
+        filename += `.${format}`;
+    }
+
+    const button = document.querySelector('#singleDownloadSection .btn-primary');
+    showLoading(button, true, 'Đang khởi tạo...');
+
+    try {
+        showStatus('⏳ Đang yêu cầu máy chủ tải video...', 'info', 'downloadStatus');
+
+        // Gọi API download (API này sẽ trả về ngay lập tức với download_id)
+        const response = await fetch('/api/download-video', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                url: url,
+                filename: filename,
+                quality: quality,
+                format: format,
+                target_dir: document.getElementById('targetDir')?.value.trim()
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.download_id) {
+            const downloadId = result.download_id;
+            
+            // Bắt đầu polling tiến trình thực tế
+            pollDownloadProgress(
+                downloadId, 
+                'download',
+                async (finalProgress) => {
+                    // Khi hoàn thành
+                    const finalFilename = finalProgress.filename;
+                    
+                    try {
+                        // Tải file về máy nếu không có target_dir
+                        const targetDir = document.getElementById('targetDir')?.value.trim();
+                        if (!targetDir) {
+                            const fileResponse = await fetch(`/api/files/${finalFilename}`);
+                            const blob = await fileResponse.blob();
+                            triggerBrowserDownload(blob, finalFilename);
+                            
+                            let message = `✅ Đã tải xuống thành công: ${finalFilename}`;
+                            if (finalProgress.size) {
+                                message += ` (${formatFileSize(finalProgress.size)})`;
+                            }
+                            showStatus(message, 'success', 'downloadStatus');
+                        } else {
+                            let message = `✅ Video đã được lưu vào: ${targetDir}\\${finalFilename}`;
+                            showStatus(message, 'success', 'downloadStatus');
+                            log(`📂 File saved localy to ${targetDir}`, 'success');
+                        }
+                    } catch (err) {
+                        showStatus(`❌ Lỗi khi lưu file: ${err.message}`, 'error', 'downloadStatus');
+                    }
+
+                    showLoading(button, false);
+                    
+                    // Clear form
+                    const urlInput = document.getElementById('videoUrl');
+                    if (urlInput) urlInput.value = '';
+
+                    // Ẩn progress sau 5 giây
+                    setTimeout(() => {
+                        const progressContainer = document.getElementById('downloadProgress');
+                        if (progressContainer) progressContainer.style.display = 'none';
+                    }, 5000);
+                },
+                (errorMessage) => {
+                    // Khi có lỗi
+                    showStatus(`❌ Tải xuống thất bại: ${errorMessage}`, 'error', 'downloadStatus');
+                    showLoading(button, false);
+                }
+            );
+
+        } else {
+            showStatus(`❌ Không thể bắt đầu tải: ${result.error || 'Lỗi không xác định'}`, 'error', 'downloadStatus');
+            showLoading(button, false);
+        }
+
+    } catch (error) {
+        showStatus(`❌ Lỗi hệ thống: ${error.message}`, 'error', 'downloadStatus');
+        showLoading(button, false);
+    }
+}
+
+// Download and Merge Videos với Progress Tracking
+export async function downloadAndMergeVideos() {
+    const urlsText = document.getElementById('videoUrls')?.value.trim();
+    const quality = document.getElementById('mergeQuality')?.value || 'best';
+    const format = document.getElementById('mergeFormat')?.value || 'mp4';
+    let filename = document.getElementById('mergeFilename')?.value.trim();
+    const transitionType = document.getElementById('transitionType')?.value || 'none';
+    const autoMerge = document.getElementById('autoMerge')?.checked || false;
+    const keepOriginals = document.getElementById('keepOriginals')?.checked || false;
+
+    if (!urlsText) {
+        showStatus('❌ Vui lòng nhập ít nhất một URL video', 'error', 'downloadStatus');
+        return;
+    }
+
+    const urls = urlsText.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+    if (urls.length === 0) return;
+
+    if (!filename) {
+        filename = `merged_video_${Date.now()}.${format}`;
+    } else if (!filename.toLowerCase().endsWith(`.${format}`)) {
+        filename += `.${format}`;
+    }
+
+    const button = document.querySelector('#mergeDownloadSection .btn-primary');
+    showLoading(button, true, 'Đang xử lý...');
+
+    const startTime = Date.now();
+    let downloadedVideos = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+        showStatus(`⏳ Bắt đầu tải ${urls.length} video...`, 'info', 'downloadStatus');
+
+        for (let i = 0; i < urls.length; i++) {
+                const response = await fetch('/api/download-video', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        url: urls[i], 
+                        quality, 
+                        format,
+                        target_dir: '' // Luôn tải vào temp trước khi gộp
+                    })
+                });
+
+            const startResult = await response.json();
+            if (startResult.success && startResult.download_id) {
+                const finalProgress = await new Promise((resolve, reject) => {
+                    pollDownloadProgress(startResult.download_id, 'merge', resolve, reject);
+                });
+                
+                if (finalProgress && finalProgress.filename) {
+                    console.log(`✅ Video ${i+1} downloaded: ${finalProgress.filename}`);
+                    downloadedVideos.push({ name: finalProgress.filename });
+                    successCount++;
+                } else {
+                    console.warn(`⚠️ Video ${i+1} completed but filename is missing`, finalProgress);
+                    failCount++;
+                }
+            } else {
+                failCount++;
+            }
+
+            updateProgress({
+                percent: ((i + 1) / urls.length) * 50,
+                text: `Đã tải xong ${i + 1}/${urls.length} video`,
+                stage: 'Đang tải danh sách video',
+                start_time: startTime / 1000
+            }, 'merge');
+        }
+
+        console.log(`📊 Total downloaded for merge: ${downloadedVideos.length}`, downloadedVideos);
+
+        if (autoMerge && downloadedVideos.length > 1) {
+            updateProgress({ percent: 75, text: 'Đang ghép video...', stage: 'Đang ghép video', start_time: startTime / 1000 }, 'merge');
+            
+            const mergeTargetDir = document.getElementById('mergeTargetDir')?.value.trim();
+            const mergeResponse = await fetch('/api/merge-videos', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    video_urls: downloadedVideos.map(v => v.name), 
+                    filename: filename,
+                    target_dir: mergeTargetDir
+                })
+            });
+            const mergeResult = await mergeResponse.json();
+            if (mergeResult.success) {
+                if (!mergeTargetDir) {
+                    const fileResponse = await fetch(`/api/files/${mergeResult.filename}`);
+                    triggerBrowserDownload(await fileResponse.blob(), mergeResult.filename);
+                    showStatus(`✅ Đã ghép thành công: ${filename}`, 'success', 'downloadStatus');
+                } else {
+                    showStatus(`✅ Đã ghép và lưu vào: ${mergeTargetDir}\\${mergeResult.filename}`, 'success', 'downloadStatus');
+                }
+            } else {
+                showStatus(`❌ Lỗi ghép video: ${mergeResult.error}`, 'error', 'downloadStatus');
+            }
+        } else {
+            for (const video of downloadedVideos) {
+                const fileResponse = await fetch(`/api/files/${video.name}`);
+                triggerBrowserDownload(await fileResponse.blob(), video.name);
+            }
+            showStatus(`✅ Đã tải ${successCount} video thành công`, 'success', 'downloadStatus');
+        }
+
+        setTimeout(() => {
+            const container = document.getElementById('mergeProgress');
+            if (container) container.style.display = 'none';
+        }, 5000);
+
+    } catch (error) {
+        showStatus(`❌ Lỗi: ${error.message}`, 'error', 'downloadStatus');
+    } finally {
+        showLoading(button, false);
+    }
+}
+
+// Export functions for global access
+window.downloadSingleVideo = downloadSingleVideo;
+window.downloadAndMergeVideos = downloadAndMergeVideos;

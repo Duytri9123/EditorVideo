@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,88 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
+    <!-- Quick Settings Panel (Floating) -->
+    <div class="quick-settings-panel" id="quickSettingsPanel">
+        <div class="settings-header">
+            <h4><i class="fas fa-sliders-h"></i> Cài đặt nhanh</h4>
+            <button class="close-settings" id="closeSettings">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Chế độ tối</span>
+                    <label class="switch">
+                        <input type="checkbox" id="darkModeToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Hiệu ứng động</span>
+                    <label class="switch">
+                        <input type="checkbox" id="animationsToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Ẩn panel trái</span>
+                    <label class="switch">
+                        <input type="checkbox" id="hideLeftPanelToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Ẩn panel phải</span>
+                    <label class="switch">
+                        <input type="checkbox" id="hideRightPanelToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Ẩn timeline</span>
+                    <label class="switch">
+                        <input type="checkbox" id="hideTimelineToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Ẩn xem trước</span>
+                    <label class="switch">
+                        <input type="checkbox" id="hidePreviewToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+            <div class="setting-group">
+                <label class="toggle-label">
+                    <span>Chế độ tập trung</span>
+                    <label class="switch">
+                        <input type="checkbox" id="focusModeToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Settings Toggle Button -->
+    <button class="quick-settings-toggle" id="quickSettingsToggle">
+        <i class="fas fa-cog"></i>
+    </button>
+
     <div class="app-container">
         <!-- HEADER -->
         <header class="app-header">
@@ -27,6 +109,14 @@
                 </div>
             </div>
             <div class="header-right">
+                <div class="header-actions">
+                    <button class="header-action-btn" id="focusModeBtn" title="Chế độ tập trung">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button class="header-action-btn" id="minimalModeBtn" title="Chế độ tối giản">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
                 <div class="user-menu">
                     <button class="user-btn">
                         <i class="fas fa-user"></i>
@@ -99,22 +189,6 @@
                     </div>
                 </nav>
 
-                <div class="system-status">
-                    <div class="status-item">
-                        <div class="status-info">
-                            <i class="fas fa-hdd"></i>
-                            <span>Dung lượng ổ cứng</span>
-                        </div>
-                        <div class="status-value" id="diskSpace">--</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-info">
-                            <i class="fas fa-memory"></i>
-                            <span>Bộ nhớ</span>
-                        </div>
-                        <div class="status-value" id="memoryUsage">--</div>
-                    </div>
-                </div>
             </aside>
 
             <!-- CONTENT AREA -->
@@ -153,6 +227,9 @@
                                 <button class="panel-action-btn" onclick="refreshFiles()" title="Làm mới">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
+                                <button class="panel-action-btn panel-collapse-btn" data-panel="left" title="Thu gọn">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="panel-content">
@@ -175,7 +252,8 @@
                             <div class="preview-header">
                                 <h3><i class="fas fa-play-circle"></i> Xem trước</h3>
                                 <div class="preview-controls">
-                                    <button class="control-btn play-pause-btn" onclick="togglePlayPause()" title="Phát/Tạm dừng">
+                                    <button class="control-btn play-pause-btn" onclick="togglePlayPause()"
+                                        title="Phát/Tạm dừng">
                                         <i class="fas fa-play"></i>
                                     </button>
                                     <button class="control-btn" onclick="stopPreview()" title="Dừng">
@@ -185,12 +263,17 @@
                                         <button class="control-btn" onclick="toggleMute()" title="Tắt/Bật âm thanh">
                                             <i class="fas fa-volume-up"></i>
                                         </button>
-                                        <input type="range" id="volumeSlider" min="0" max="100" value="100" class="volume-slider">
+                                        <input type="range" id="volumeSlider" min="0" max="100" value="100"
+                                            class="volume-slider">
                                         <span id="volumeText">100%</span>
                                     </div>
                                     <div class="time-display">
                                         <span id="currentTime">00:00</span> / <span id="totalTime">00:00</span>
                                     </div>
+                                    <button class="control-btn preview-collapse-btn" data-panel="preview"
+                                        title="Thu gọn">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
                                 </div>
                             </div>
                             <div class="preview-container">
@@ -257,11 +340,13 @@
                                         <div class="form-group">
                                             <label>Chế độ tải:</label>
                                             <div class="mode-toggle">
-                                                <button class="mode-btn active" data-mode="single" onclick="switchDownloadMode('single')">
+                                                <button class="mode-btn active" data-mode="single"
+                                                    onclick="switchDownloadMode('single')">
                                                     <i class="fas fa-file-video"></i>
                                                     Tải Video Đơn
                                                 </button>
-                                                <button class="mode-btn" data-mode="merge" onclick="switchDownloadMode('merge')">
+                                                <button class="mode-btn" data-mode="merge"
+                                                    onclick="switchDownloadMode('merge')">
                                                     <i class="fas fa-object-group"></i>
                                                     Ghép Nhiều Video
                                                 </button>
@@ -274,25 +359,66 @@
                                                 <label for="videoUrl">URL Video</label>
                                                 <div class="input-with-icon">
                                                     <i class="fas fa-link"></i>
-                                                    <input type="text" id="videoUrl" placeholder="https://youtube.com/watch?v=...">
+                                                    <input type="text" id="videoUrl"
+                                                        placeholder="https://youtube.com/watch?v=...">
                                                 </div>
                                             </div>
                                             <div class="form-group">
                                                 <label for="filename">Tên tệp tùy chỉnh (tùy chọn)</label>
-                                                <input type="text" id="filename" placeholder="Để trống để tự động đặt tên">
+                                                <input type="text" id="filename"
+                                                    placeholder="Để trống để tự động đặt tên">
                                             </div>
+                                            <div class="form-group">
+                                                <label for="targetDir">Thư mục lưu trữ (tùy chọn)</label>
+                                                <input type="text" id="targetDir"
+                                                    placeholder="Ví dụ: C:\Downloads\Videos">
+                                                <small class="help-text">Nhập đường dẫn thư mục trên máy tính để tự động chuyển file vào đó.</small>
+                                            </div>
+
                                             <button class="btn btn-primary full-width" onclick="downloadSingleVideo()">
                                                 <i class="fas fa-download"></i>
                                                 Tải Video Đơn
                                             </button>
+
+                                            <!-- Progress for single download -->
+                                            <div class="download-progress-enhanced" id="singleProgress"
+                                                style="display: none;">
+                                                <div class="progress-header">
+                                                    <span class="progress-stage" id="singleStage">Đang chuẩn
+                                                        bị...</span>
+                                                    <span class="progress-percent" id="singlePercent">0%</span>
+                                                </div>
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" id="singleProgressFill"></div>
+                                                </div>
+                                                <div class="progress-details">
+                                                    <div class="progress-detail-item">
+                                                        <i class="fas fa-download"></i>
+                                                        <span id="singleSize">0 B / 0 B</span>
+                                                    </div>
+                                                    <div class="progress-detail-item">
+                                                        <i class="fas fa-tachometer-alt"></i>
+                                                        <span id="singleSpeed">0 B/s</span>
+                                                    </div>
+                                                    <div class="progress-detail-item">
+                                                        <i class="fas fa-clock"></i>
+                                                        <span id="singleETA">--:--</span>
+                                                    </div>
+                                                </div>
+                                                <div class="progress-text" id="singleProgressText">Đang tải video...
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- Merge Videos Download -->
                                         <div class="download-section" id="mergeDownloadSection">
                                             <div class="form-group">
                                                 <label for="videoUrls">URLs Video (mỗi URL một dòng)</label>
-                                                <textarea id="videoUrls" placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=..." rows="6"></textarea>
-                                                <small class="help-text">Các video sẽ được tải và ghép nối theo thứ tự</small>
+                                                <textarea id="videoUrls"
+                                                    placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=..."
+                                                    rows="6"></textarea>
+                                                <small class="help-text">Các video sẽ được tải và ghép nối theo thứ
+                                                    tự</small>
                                             </div>
 
                                             <!-- URL Preview -->
@@ -306,6 +432,7 @@
                                                 <input type="text" id="mergeFilename" placeholder="video_ghep.mp4">
                                             </div>
 
+
                                             <div class="form-group">
                                                 <label for="transitionType">Hiệu ứng chuyển cảnh</label>
                                                 <select id="transitionType">
@@ -314,6 +441,12 @@
                                                     <option value="slide">Slide</option>
                                                     <option value="crossfade">Crossfade</option>
                                                 </select>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="mergeTargetDir">Thư mục lưu trữ tệp gộp</label>
+                                                <input type="text" id="mergeTargetDir"
+                                                    placeholder="Ví dụ: C:\Downloads\Merged">
                                             </div>
 
                                             <div class="checkbox-group">
@@ -329,21 +462,38 @@
                                                 </label>
                                             </div>
 
-                                            <button class="btn btn-primary full-width" onclick="downloadAndMergeVideos()">
+                                            <button class="btn btn-primary full-width"
+                                                onclick="downloadAndMergeVideos()">
                                                 <i class="fas fa-object-group"></i>
                                                 Tải & Ghép Video
                                             </button>
 
                                             <!-- Progress for merge download -->
-                                            <div class="upload-progress" id="mergeProgress" style="display: none;">
-                                                <div class="progress-info">
+                                            <div class="download-progress-enhanced" id="mergeProgress"
+                                                style="display: none;">
+                                                <div class="progress-header">
                                                     <span class="progress-stage" id="mergeStage">Đang chuẩn bị...</span>
                                                     <span class="progress-percent" id="mergePercent">0%</span>
                                                 </div>
                                                 <div class="progress-bar">
                                                     <div class="progress-fill" id="mergeProgressFill"></div>
                                                 </div>
-                                                <div class="progress-text" id="mergeProgressText">Đang tải video 0/0</div>
+                                                <div class="progress-details">
+                                                    <div class="progress-detail-item">
+                                                        <i class="fas fa-download"></i>
+                                                        <span id="mergeSize">0 B / 0 B</span>
+                                                    </div>
+                                                    <div class="progress-detail-item">
+                                                        <i class="fas fa-tachometer-alt"></i>
+                                                        <span id="mergeSpeed">0 B/s</span>
+                                                    </div>
+                                                    <div class="progress-detail-item">
+                                                        <i class="fas fa-clock"></i>
+                                                        <span id="mergeETA">--:--</span>
+                                                    </div>
+                                                </div>
+                                                <div class="progress-text" id="mergeProgressText">Đang tải video 0/0
+                                                </div>
                                             </div>
                                         </div>
 
@@ -374,22 +524,28 @@
                                         </div>
 
                                         <div class="timeline-controls-horizontal">
-                                            <button class="btn btn-secondary" onclick="zoomInTimeline()" title="Phóng to">
+                                            <button class="btn btn-secondary" onclick="zoomInTimeline()"
+                                                title="Phóng to">
                                                 <i class="fas fa-search-plus"></i>
                                             </button>
-                                            <button class="btn btn-secondary" onclick="zoomOutTimeline()" title="Thu nhỏ">
+                                            <button class="btn btn-secondary" onclick="zoomOutTimeline()"
+                                                title="Thu nhỏ">
                                                 <i class="fas fa-search-minus"></i>
                                             </button>
-                                            <button class="btn btn-secondary" onclick="fitTimeline()" title="Vừa màn hình">
+                                            <button class="btn btn-secondary" onclick="fitTimeline()"
+                                                title="Vừa màn hình">
                                                 <i class="fas fa-expand"></i>
                                             </button>
-                                            <button class="btn btn-secondary" id="snapToggle" onclick="toggleSnap()" title="Bật/Tắt dính lưới">
+                                            <button class="btn btn-secondary" id="snapToggle" onclick="toggleSnap()"
+                                                title="Bật/Tắt dính lưới">
                                                 <i class="fas fa-magnet"></i>
                                             </button>
-                                            <button class="btn btn-secondary" onclick="splitAtPlayhead()" title="Cắt tại vị trí playhead">
+                                            <button class="btn btn-secondary" onclick="splitAtPlayhead()"
+                                                title="Cắt tại vị trí playhead">
                                                 <i class="fas fa-cut"></i>
                                             </button>
-                                            <button class="btn btn-warning" onclick="clearTimeline()" title="Xóa timeline">
+                                            <button class="btn btn-warning" onclick="clearTimeline()"
+                                                title="Xóa timeline">
                                                 <i class="fas fa-trash"></i>
                                                 Xóa
                                             </button>
@@ -401,7 +557,8 @@
                                         </div>
 
                                         <div class="timeline-playback-controls">
-                                            <button class="btn btn-primary" id="timelinePlayPause" onclick="toggleTimelinePlayback()">
+                                            <button class="btn btn-primary" id="timelinePlayPause"
+                                                onclick="toggleTimelinePlayback()">
                                                 <i class="fas fa-play"></i> Phát
                                             </button>
                                             <button class="btn btn-secondary" onclick="seekToStart()" title="Về đầu">
@@ -411,9 +568,11 @@
                                                 <i class="fas fa-step-forward"></i>
                                             </button>
                                             <span class="time-display-small">
-                                                <span id="timelineCurrentTime">00:00</span> / <span id="timelineTotalTime">00:00</span>
+                                                <span id="timelineCurrentTime">00:00</span> / <span
+                                                    id="timelineTotalTime">00:00</span>
                                             </span>
-                                            <button class="btn btn-primary" onclick="exportTimeline()" title="Xuất timeline">
+                                            <button class="btn btn-primary" onclick="exportTimeline()"
+                                                title="Xuất timeline">
                                                 <i class="fas fa-share"></i>
                                                 Xuất Timeline
                                             </button>
@@ -455,23 +614,28 @@
                                         <div class="processing-options">
                                             <div class="option-group">
                                                 <label>Độ sáng: <span id="brightnessValue">100%</span></label>
-                                                <input type="range" id="brightness" min="50" max="200" value="100" class="slider">
+                                                <input type="range" id="brightness" min="50" max="200" value="100"
+                                                    class="slider">
                                             </div>
                                             <div class="option-group">
                                                 <label>Độ tương phản: <span id="contrastValue">100%</span></label>
-                                                <input type="range" id="contrast" min="50" max="200" value="100" class="slider">
+                                                <input type="range" id="contrast" min="50" max="200" value="100"
+                                                    class="slider">
                                             </div>
                                             <div class="option-group">
                                                 <label>Độ bão hòa: <span id="saturationValue">100%</span></label>
-                                                <input type="range" id="saturation" min="0" max="200" value="100" class="slider">
+                                                <input type="range" id="saturation" min="0" max="200" value="100"
+                                                    class="slider">
                                             </div>
                                             <div class="option-group">
                                                 <label>Xoay: <span id="rotationValue">0°</span></label>
-                                                <input type="range" id="rotation" min="0" max="360" value="0" class="slider">
+                                                <input type="range" id="rotation" min="0" max="360" value="0"
+                                                    class="slider">
                                             </div>
                                             <div class="option-group">
                                                 <label>Độ dày viền: <span id="borderWidthValue">0px</span></label>
-                                                <input type="range" id="borderWidth" min="0" max="20" value="0" class="slider">
+                                                <input type="range" id="borderWidth" min="0" max="20" value="0"
+                                                    class="slider">
                                             </div>
                                             <div class="option-group">
                                                 <label for="borderColor">Màu viền</label>
@@ -514,12 +678,14 @@
                                                 <label for="audioUrl">URL Video</label>
                                                 <div class="input-with-icon">
                                                     <i class="fas fa-link"></i>
-                                                    <input type="text" id="audioUrl" placeholder="https://youtube.com/watch?v=...">
+                                                    <input type="text" id="audioUrl"
+                                                        placeholder="https://youtube.com/watch?v=...">
                                                 </div>
                                             </div>
                                             <div class="form-group">
                                                 <label for="audioFilename">Tên tệp tùy chỉnh (tùy chọn)</label>
-                                                <input type="text" id="audioFilename" placeholder="Để trống để tự động đặt tên">
+                                                <input type="text" id="audioFilename"
+                                                    placeholder="Để trống để tự động đặt tên">
                                             </div>
                                             <div class="form-group">
                                                 <label for="audioFormat">Định dạng Âm thanh</label>
@@ -566,26 +732,50 @@
                                     </div>
                                 </div>
 
-                                <!-- YOUTUBE TAB -->
+                                <!-- YOUTUBE TAB - UPDATED -->
                                 <div class="tab-pane" id="youtubeTab">
                                     <div class="tab-content">
                                         <h3><i class="fab fa-youtube"></i> Upload lên YouTube</h3>
 
                                         <div class="tool-section">
                                             <h4>Upload Video Đơn</h4>
+
+                                            <!-- Local File Selection -->
                                             <div class="form-group">
-                                                <label for="youtubeVideo">Chọn Video</label>
-                                                <select id="youtubeVideo">
-                                                    <option value="">-- Chọn video --</option>
-                                                </select>
+                                                <label>Chọn video từ máy tính:</label>
+                                                <div class="file-upload-area" id="youtubeUploadArea">
+                                                    <div class="file-upload-label">
+                                                        <i class="fas fa-cloud-upload-alt"></i>
+                                                        <span>Kéo thả video vào đây hoặc nhấn để chọn</span>
+                                                        <small>Hỗ trợ MP4, MOV, AVI, MKV</small>
+                                                    </div>
+                                                    <input type="file" id="youtubeVideoFile" accept="video/*"
+                                                        style="display: none;">
+                                                </div>
+                                                <div id="youtubeFileInfo" class="file-info" style="display: none;">
+                                                    <div class="file-preview">
+                                                        <i class="fas fa-file-video"></i>
+                                                        <div class="file-details">
+                                                            <span class="file-name" id="youtubeFileName">--</span>
+                                                            <span class="file-size" id="youtubeFileSize">--</span>
+                                                        </div>
+                                                        <button type="button" class="btn btn-secondary btn-sm"
+                                                            onclick="clearYoutubeFile()">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
+
+
                                             <div class="form-group">
                                                 <label for="youtubeTitle">Tiêu đề Video</label>
                                                 <input type="text" id="youtubeTitle" placeholder="Nhập tiêu đề video">
                                             </div>
                                             <div class="form-group">
                                                 <label for="youtubeDescription">Mô tả</label>
-                                                <textarea id="youtubeDescription" placeholder="Nhập mô tả video" rows="3"></textarea>
+                                                <textarea id="youtubeDescription" placeholder="Nhập mô tả video"
+                                                    rows="3"></textarea>
                                             </div>
                                             <div class="form-group">
                                                 <label for="youtubePrivacy">Quyền riêng tư</label>
@@ -605,7 +795,9 @@
                                             <h4>Tự động Upload từ URLs</h4>
                                             <div class="form-group">
                                                 <label for="autoUrls">URLs Video (mỗi URL một dòng)</label>
-                                                <textarea id="autoUrls" placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=..." rows="4"></textarea>
+                                                <textarea id="autoUrls"
+                                                    placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=...&#10;https://youtube.com/watch?v=..."
+                                                    rows="4"></textarea>
                                             </div>
                                             <div class="form-group">
                                                 <label for="autoTitle">Mẫu tiêu đề Video</label>
@@ -614,7 +806,8 @@
                                             </div>
                                             <div class="form-group">
                                                 <label for="autoDescription">Mẫu mô tả</label>
-                                                <textarea id="autoDescription" placeholder="Nhập mẫu mô tả video" rows="2"></textarea>
+                                                <textarea id="autoDescription" placeholder="Nhập mẫu mô tả video"
+                                                    rows="2"></textarea>
                                             </div>
                                             <div class="form-group">
                                                 <label for="youtubeLogo">Chọn Logo (Tùy chọn)</label>
@@ -681,7 +874,8 @@
                                             <div class="form-group">
                                                 <label for="logoUpload">Logo/Watermark</label>
                                                 <div class="file-upload">
-                                                    <input type="file" id="logoUpload" accept=".png,.jpg,.jpeg,.gif,.webp">
+                                                    <input type="file" id="logoUpload"
+                                                        accept=".png,.jpg,.jpeg,.gif,.webp">
                                                     <div class="file-upload-label">
                                                         <i class="fas fa-upload"></i>
                                                         <span>Chọn file logo</span>
@@ -724,6 +918,11 @@
                     <div class="panel right-panel" id="rightPanel">
                         <div class="panel-header">
                             <h3><i class="fas fa-sliders-h"></i> Thuộc tính</h3>
+                            <div class="panel-actions">
+                                <button class="panel-action-btn panel-collapse-btn" data-panel="right" title="Thu gọn">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="panel-content">
                             <div class="property-group">
@@ -807,7 +1006,8 @@
                             <button class="control-btn" onclick="fitTimeline()" title="Vừa màn hình">
                                 <i class="fas fa-expand"></i>
                             </button>
-                            <button class="control-btn" id="timelineSnapToggle" onclick="toggleSnap()" title="Bật/Tắt dính lưới">
+                            <button class="control-btn" id="timelineSnapToggle" onclick="toggleSnap()"
+                                title="Bật/Tắt dính lưới">
                                 <i class="fas fa-magnet"></i>
                             </button>
                             <button class="control-btn" onclick="splitAtPlayhead()" title="Cắt tại vị trí playhead">
@@ -815,6 +1015,9 @@
                             </button>
                             <button class="control-btn" onclick="clearTimeline()" title="Xóa timeline">
                                 <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="control-btn timeline-collapse-btn" data-panel="timeline" title="Thu gọn">
+                                <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
                         <div class="timeline-ruler" id="timelineRuler">
@@ -859,8 +1062,11 @@
 
     <script type="module" src="api/index.js"></script>
     <script type="module" src="ui/index.js"></script>
-    <script type="module" src="ui_enhancements.js"></script>
+    <script src="ui_enhancements.js"></script>
     <script type="module" src="init.js"></script>
     <script type="module" src="timeline/TimelineEngine.js"></script>
+    <script type="module" src="ui/handlers/download-handlers.js"></script>
+    <script type="module" src="ui/handlers/youtube-handlers.js"></script>
 </body>
+
 </html>
